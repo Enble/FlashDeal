@@ -1,0 +1,38 @@
+= FlashDeal API 문서
+:toc: left
+:toclevels: 2
+:source-highlighter: highlightjs
+
+== Product API
+
+=== 상품 등록
+
+.Request
+include::{snippets}/product-create/http-request.adoc[]
+include::{snippets}/product-create/request-fields.adoc[]
+
+.Response
+include::{snippets}/product-create/http-response.adoc[]
+include::{snippets}/product-create/response-fields.adoc[]
+
+=== 상품 조회
+
+.Request
+include::{snippets}/product-get/http-request.adoc[]
+include::{snippets}/product-get/path-parameters.adoc[]
+
+.Response
+include::{snippets}/product-get/http-response.adoc[]
+include::{snippets}/product-get/response-fields.adoc[]
+
+== Order API
+
+=== 주문 생성
+
+.Request
+include::{snippets}/order-create/http-request.adoc[]
+include::{snippets}/order-create/request-fields.adoc[]
+
+.Response
+include::{snippets}/order-create/http-response.adoc[]
+include::{snippets}/order-create/response-fields.adoc[]
