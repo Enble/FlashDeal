@@ -39,3 +39,9 @@ out/
 ### docs & claude
 docs/
 CLAUDE.md
+
+### env
+.env
+
+### local scripts
+infra-up.sh

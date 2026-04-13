@@ -1,0 +1,69 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: flashdeal-mysql
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mysql-exporter:
+    image: prom/mysqld-exporter:latest
+    container_name: flashdeal-mysql-exporter
+    ports:
+      - "9104:9104"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - ./docker/mysql-exporter/.my.cnf:/.my.cnf.tmpl
+    entrypoint:
+      - sh
+      - -c
+      - |
+        sed "s/MYSQL_PASSWORD_PLACEHOLDER/$$MYSQL_ROOT_PASSWORD/" /.my.cnf.tmpl > /tmp/.my.cnf
+        exec /bin/mysqld_exporter --config.my-cnf=/tmp/.my.cnf
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: flashdeal-prometheus
+    ports:
+      - "9091:9090"
+    environment:
+      SPRING_HOST: ${SPRING_HOST}
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml.tmpl
+    entrypoint:
+      - sh
+      - -c
+      - |
+        sed "s/SPRING_HOST_PLACEHOLDER/$$SPRING_HOST/" /etc/prometheus/prometheus.yml.tmpl > /tmp/prometheus.yml
+        exec /bin/prometheus --config.file=/tmp/prometheus.yml --storage.tsdb.path=/prometheus
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: flashdeal-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+
+volumes:
+  mysql-data:
+  grafana-data:
