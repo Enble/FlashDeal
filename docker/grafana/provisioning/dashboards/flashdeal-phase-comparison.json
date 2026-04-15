@@ -143,7 +143,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(rate(http_server_requests_seconds_count{uri=\"/orders\", outcome!=\"SUCCESS\"}[10s])) / sum(rate(http_server_requests_seconds_count{uri=\"/orders\"}[10s])) * 100",
+          "expr": "(1 - sum(rate(http_server_requests_seconds_count{uri=\"/orders\", outcome=\"SUCCESS\"}[10s])) / sum(rate(http_server_requests_seconds_count{uri=\"/orders\"}[10s]))) * 100",
           "legendFormat": "Error Rate (%)"
         }
       ]
