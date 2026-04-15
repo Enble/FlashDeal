@@ -34,9 +34,10 @@ public class DataInitializer implements CommandLineRunner {
                 Member.create("테스트유저3", "user3@test.com")
         ));
 
-        // JMeter 부하 테스트용 상품: 재고 100개, 판매 즉시 시작
+        // JMeter 부하 테스트용 상품: 재고 10_000개, 판매 즉시 시작
+        // Phase별 비교 측정 시 재고 소진으로 TPS 왜곡되지 않도록 충분한 수량으로 설정
         productRepository.save(
-                Product.create("플래시딜 상품 A", 10_000, 100, LocalDateTime.now().minusMinutes(1))
+                Product.create("플래시딜 상품 A", 10_000, 10_000, LocalDateTime.now().minusMinutes(1))
         );
 
         log.info("테스트 데이터 초기화 완료 — 회원 {}명, 상품 1개", members.size());
