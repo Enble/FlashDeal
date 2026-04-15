@@ -99,4 +99,54 @@ class OrderConcurrencyTest {
         // 결과적으로 '주문은 생성됐으나 재고는 차감되지 않은' 데이터 불일치 발생.
         assertThat(orderCount).isGreaterThan(stockConsumed);
     }
+
+    @Test
+    @DisplayName("SELECT FOR UPDATE(비관적 락)으로 200개 동시 요청을 처리하면 주문 수와 재고 차감량이 일치한다.")
+    void 비관적_락_적용_시_데이터_정합성_보장() throws InterruptedException {
+        int initialStock = 100;
+        int threadCount = 200;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        AtomicInteger successCount = new AtomicInteger();
+        AtomicInteger failCount = new AtomicInteger();
+
+        for (int i = 0; i < threadCount; i++) {
+            executor.submit(() -> {
+                try {
+                    orderService.placeOrder(new OrderCreateRequest(testMember.getId(), testProduct.getId(), 1));
+                    successCount.incrementAndGet();
+                } catch (Exception e) {
+                    failCount.incrementAndGet();
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+
+        latch.await();
+        executor.shutdown();
+
+        Product result = productRepository.findById(testProduct.getId()).orElseThrow();
+        long orderCount = orderRepository.count();
+        int stockConsumed = initialStock - result.getStockQuantity();
+
+        System.out.println("=== Phase 2 비관적 락 결과 ===");
+        System.out.println("초기 재고        : " + initialStock);
+        System.out.println("총 요청 수       : " + threadCount);
+        System.out.println("성공 주문 수(앱)  : " + successCount.get());
+        System.out.println("실패 주문 수(앱)  : " + failCount.get());
+        System.out.println("최종 재고        : " + result.getStockQuantity());
+        System.out.println("실제 차감된 재고  : " + stockConsumed);
+        System.out.println("DB 주문 건수     : " + orderCount);
+        System.out.println("--- 데이터 정합성 ---");
+        System.out.println("주문 건수 == 차감량 : " + orderCount + " == " + stockConsumed
+                + " → " + (orderCount == stockConsumed ? "일치 (정합성 보장)" : "불일치"));
+
+        // SELECT FOR UPDATE로 read-modify-write를 직렬화.
+        // 재고가 소진되면 이후 요청은 OutOfStockException으로 거부되고 주문이 생성되지 않는다.
+        // 결과: 주문 건수 = 실제 차감된 재고 (lost update 없음).
+        assertThat(orderCount).isEqualTo(stockConsumed);
+        assertThat(successCount.get()).isEqualTo((int) orderCount);
+        assertThat(result.getStockQuantity()).isGreaterThanOrEqualTo(0);
+    }
 }
