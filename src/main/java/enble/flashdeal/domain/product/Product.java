@@ -52,4 +52,8 @@ public class Product {
     public void decreaseStock(int quantity) {
         this.stockQuantity -= quantity;
     }
+
+    public void resetStock(int quantity) {
+        this.stockQuantity = quantity;
+    }
 }
