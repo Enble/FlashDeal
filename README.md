@@ -66,24 +66,3 @@ Consumer 실패 시 Dead Letter Topic으로 격리해 장애 내성 확보.
 | 캐시 / 동시성 | Redis, Redisson, Lua Script |
 | 메시징 | Kafka, Dead Letter Topic |
 | 인프라 / 테스트 | Docker Compose, JMeter, JUnit 5 |
-
----
-
-## 면접 스토리 흐름
-
-```
-① DB 트랜잭션만으로 구현
-        ↓ 문제: 동시 요청 시 재고 오버셀 발생 (JMeter로 증명)
-
-② Redis DECR 원자 연산 적용
-        ↓ 해결: 재고 차감 오버셀 제거
-        ↓ 한계: 복수 조건(중복 확인 + 수량 확인 + 발급)을 묶을 수 없음
-
-③ Redisson 분산 락 적용 (쿠폰 발급)
-        ↓ 해결: 복잡한 비즈니스 로직 블록 전체를 직렬화
-        ↓ 고민: 락 타임아웃, 데드락 방지 처리
-
-④ Kafka로 후처리 비동기화
-        ↓ 해결: API 응답 속도 개선, 서비스 간 결합도 제거
-        ↓ 추가: Dead Letter Topic으로 장애 내성 확보
-```
