@@ -6,6 +6,7 @@ import enble.flashdeal.domain.order.dto.OrderCreateRequest;
 import enble.flashdeal.domain.order.dto.OrderResponse;
 import enble.flashdeal.domain.product.Product;
 import enble.flashdeal.domain.product.ProductRepository;
+import enble.flashdeal.domain.product.StockService;
 import enble.flashdeal.global.exception.MemberNotFoundException;
 import enble.flashdeal.global.exception.OutOfStockException;
 import enble.flashdeal.global.exception.SaleNotStartedException;
@@ -23,6 +24,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,6 +42,9 @@ class OrderServiceTest {
 
     @Mock
     private MemberRepository memberRepository;
+
+    @Mock
+    private StockService stockService;
 
     private Member member;
     private Product onSaleProduct;
@@ -58,24 +64,24 @@ class OrderServiceTest {
         Order order = Order.create(member, onSaleProduct, 1);
 
         given(memberRepository.findById(1L)).willReturn(Optional.of(member));
-        given(productRepository.findByIdWithLock(1L)).willReturn(Optional.of(onSaleProduct));
+        given(productRepository.findById(1L)).willReturn(Optional.of(onSaleProduct));
+        given(stockService.decrease(anyLong(), anyInt())).willReturn(true);
         given(orderRepository.save(any())).willReturn(order);
 
         OrderResponse response = orderService.placeOrder(request);
 
         assertThat(response.quantity()).isEqualTo(1);
         assertThat(response.status()).isEqualTo(OrderStatus.COMPLETED);
-        assertThat(onSaleProduct.getStockQuantity()).isEqualTo(9);
     }
 
     @Test
     @DisplayName("재고 부족 시 OutOfStockException이 발생한다.")
     void placeOrder_outOfStock() {
-        Product lowStockProduct = Product.create("재고없는 상품", 10_000, 0, LocalDateTime.now().minusHours(1));
         OrderCreateRequest request = new OrderCreateRequest(1L, 1L, 1);
 
         given(memberRepository.findById(1L)).willReturn(Optional.of(member));
-        given(productRepository.findByIdWithLock(1L)).willReturn(Optional.of(lowStockProduct));
+        given(productRepository.findById(1L)).willReturn(Optional.of(onSaleProduct));
+        given(stockService.decrease(anyLong(), anyInt())).willReturn(false);
 
         assertThatThrownBy(() -> orderService.placeOrder(request))
                 .isInstanceOf(OutOfStockException.class);
@@ -87,7 +93,7 @@ class OrderServiceTest {
         OrderCreateRequest request = new OrderCreateRequest(1L, 1L, 1);
 
         given(memberRepository.findById(1L)).willReturn(Optional.of(member));
-        given(productRepository.findByIdWithLock(1L)).willReturn(Optional.of(notYetOnSaleProduct));
+        given(productRepository.findById(1L)).willReturn(Optional.of(notYetOnSaleProduct));
 
         assertThatThrownBy(() -> orderService.placeOrder(request))
                 .isInstanceOf(SaleNotStartedException.class);
