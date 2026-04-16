@@ -50,6 +50,18 @@ services:
         sed "s/SPRING_HOST_PLACEHOLDER/$$SPRING_HOST/" /etc/prometheus/prometheus.yml.tmpl > /tmp/prometheus.yml
         exec /bin/prometheus --config.file=/tmp/prometheus.yml --storage.tsdb.path=/prometheus
 
+  redis:
+    image: redis:7.2-alpine
+    container_name: flashdeal-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --save "" --appendonly no
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
   grafana:
     image: grafana/grafana:latest
     container_name: flashdeal-grafana
