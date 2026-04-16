@@ -6,6 +6,7 @@ import enble.flashdeal.domain.order.dto.OrderCreateRequest;
 import enble.flashdeal.domain.order.dto.OrderResponse;
 import enble.flashdeal.domain.product.Product;
 import enble.flashdeal.domain.product.ProductRepository;
+import enble.flashdeal.domain.product.StockService;
 import enble.flashdeal.global.exception.MemberNotFoundException;
 import enble.flashdeal.global.exception.OutOfStockException;
 import enble.flashdeal.global.exception.ProductNotFoundException;
@@ -21,31 +22,31 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final MemberRepository memberRepository;
+    private final StockService stockService;
 
     /**
-     * Phase 2 — SELECT FOR UPDATE(비관적 락)으로 동시성 제어.
+     * Phase 3 — Redis DECR 원자 연산으로 재고 차감.
      *
-     * 상품 조회 시점에 배타 락을 획득해 read-modify-write를 직렬화한다.
-     * 데드락과 lost update가 해소되는 대신, 트랜잭션이 락을 보유하는 동안
-     * 다른 트랜잭션이 블로킹되어 고동시 환경에서 TPS가 감소한다.
+     * DB SELECT FOR UPDATE를 제거하고 Redis DECR로 재고 게이트를 대체한다.
+     * DECR은 Redis 단일 스레드 명령 실행 모델에 의해 원자적으로 처리되므로
+     * 락 없이도 오버셀이 방지된다.
+     * DB 커넥션은 주문 INSERT에만 사용되므로 HikariCP 병목이 해소된다.
      */
     @Transactional
     public OrderResponse placeOrder(OrderCreateRequest request) {
         Member member = memberRepository.findById(request.memberId())
                 .orElseThrow(MemberNotFoundException::new);
 
-        Product product = productRepository.findByIdWithLock(request.productId())
+        Product product = productRepository.findById(request.productId())
                 .orElseThrow(ProductNotFoundException::new);
 
         if (!product.isSaleStarted()) {
             throw new SaleNotStartedException();
         }
 
-        if (product.getStockQuantity() < request.quantity()) {
+        if (!stockService.decrease(request.productId(), request.quantity())) {
             throw new OutOfStockException();
         }
-
-        product.decreaseStock(request.quantity());
 
         Order order = Order.create(member, product, request.quantity());
         return OrderResponse.from(orderRepository.save(order));
