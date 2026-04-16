@@ -14,6 +14,8 @@ import enble.flashdeal.global.exception.SaleNotStartedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 @RequiredArgsConstructor
@@ -25,12 +27,11 @@ public class OrderService {
     private final StockService stockService;
 
     /**
-     * Phase 3 — Redis DECR 원자 연산으로 재고 차감.
+     * Phase 3 — Redis Lua script + DB 롤백 보상으로 재고-주문 정합성 보장.
      *
-     * DB SELECT FOR UPDATE를 제거하고 Redis DECR로 재고 게이트를 대체한다.
-     * DECR은 Redis 단일 스레드 명령 실행 모델에 의해 원자적으로 처리되므로
-     * 락 없이도 오버셀이 방지된다.
-     * DB 커넥션은 주문 INSERT에만 사용되므로 HikariCP 병목이 해소된다.
+     * 1. Redis Lua script로 DECR + 보상 INCR을 원자 블록으로 실행한다.
+     * 2. DECR 성공 후 DB INSERT가 실패하면 TransactionSynchronization 콜백이
+     *    트랜잭션 롤백 시점에 Redis INCR을 호출해 재고를 복구한다.
      */
     @Transactional
     public OrderResponse placeOrder(OrderCreateRequest request) {
@@ -46,6 +47,19 @@ public class OrderService {
 
         if (!stockService.decrease(request.productId(), request.quantity())) {
             throw new OutOfStockException();
+        }
+
+        // DB 트랜잭션이 롤백되면 차감된 Redis 재고를 복구한다.
+        // isSynchronizationActive() 가드: 트랜잭션 없이 호출되는 단위 테스트 환경에서 예외 방지
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    if (status == STATUS_ROLLED_BACK) {
+                        stockService.increase(request.productId(), request.quantity());
+                    }
+                }
+            });
         }
 
         Order order = Order.create(member, product, request.quantity());
