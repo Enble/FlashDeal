@@ -3,13 +3,18 @@ package enble.flashdeal.domain.product;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.script.RedisScript;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
@@ -28,51 +33,62 @@ class StockServiceTest {
     private static final Long PRODUCT_ID = 1L;
     private static final String STOCK_KEY = "stock:1";
 
+    // ---- decrease (Lua script) ----
+
     @Test
-    @DisplayName("재고가 충분하면 DECR 후 true를 반환한다.")
+    @DisplayName("재고가 충분하면 Lua script DECR 후 true를 반환한다.")
     void decrease_success() {
-        given(redisTemplate.opsForValue()).willReturn(valueOps);
-        given(valueOps.decrement(STOCK_KEY, 1)).willReturn(9L);
+        given(redisTemplate.execute(
+                ArgumentMatchers.<RedisScript<Long>>any(), anyList(), any()))
+                .willReturn(9L);
 
-        boolean result = stockService.decrease(PRODUCT_ID, 1);
-
-        assertThat(result).isTrue();
+        assertThat(stockService.decrease(PRODUCT_ID, 1)).isTrue();
     }
 
     @Test
     @DisplayName("DECR 후 재고가 정확히 0이 되면 true를 반환한다.")
     void decrease_exactlyZero() {
-        given(redisTemplate.opsForValue()).willReturn(valueOps);
-        given(valueOps.decrement(STOCK_KEY, 1)).willReturn(0L);
+        given(redisTemplate.execute(
+                ArgumentMatchers.<RedisScript<Long>>any(), anyList(), any()))
+                .willReturn(0L);
 
-        boolean result = stockService.decrease(PRODUCT_ID, 1);
-
-        assertThat(result).isTrue();
+        assertThat(stockService.decrease(PRODUCT_ID, 1)).isTrue();
     }
 
     @Test
-    @DisplayName("DECR 후 재고가 음수이면 INCR로 복구하고 false를 반환한다.")
+    @DisplayName("재고 부족 시 Lua script가 -1을 반환하면 false를 반환한다.")
     void decrease_outOfStock() {
-        given(redisTemplate.opsForValue()).willReturn(valueOps);
-        given(valueOps.decrement(STOCK_KEY, 1)).willReturn(-1L);
+        // Lua script가 내부에서 INCRBY 보상까지 처리하고 -1을 반환
+        given(redisTemplate.execute(
+                ArgumentMatchers.<RedisScript<Long>>any(), anyList(), any()))
+                .willReturn(-1L);
 
-        boolean result = stockService.decrease(PRODUCT_ID, 1);
-
-        assertThat(result).isFalse();
-        verify(valueOps).increment(STOCK_KEY, 1);
+        assertThat(stockService.decrease(PRODUCT_ID, 1)).isFalse();
     }
 
     @Test
-    @DisplayName("DECR 결과가 null이면 INCR로 복구하고 false를 반환한다.")
+    @DisplayName("Lua script 결과가 null이면 false를 반환한다.")
     void decrease_nullResult() {
+        given(redisTemplate.execute(
+                ArgumentMatchers.<RedisScript<Long>>any(), anyList(), any()))
+                .willReturn(null);
+
+        assertThat(stockService.decrease(PRODUCT_ID, 1)).isFalse();
+    }
+
+    // ---- increase ----
+
+    @Test
+    @DisplayName("재고를 증가시킨다.")
+    void increase() {
         given(redisTemplate.opsForValue()).willReturn(valueOps);
-        given(valueOps.decrement(STOCK_KEY, 1)).willReturn(null);
 
-        boolean result = stockService.decrease(PRODUCT_ID, 1);
+        stockService.increase(PRODUCT_ID, 1);
 
-        assertThat(result).isFalse();
         verify(valueOps).increment(STOCK_KEY, 1);
     }
+
+    // ---- getStock ----
 
     @Test
     @DisplayName("재고 키가 있으면 파싱된 값을 반환한다.")
@@ -80,9 +96,7 @@ class StockServiceTest {
         given(redisTemplate.opsForValue()).willReturn(valueOps);
         given(valueOps.get(STOCK_KEY)).willReturn("42");
 
-        Long stock = stockService.getStock(PRODUCT_ID);
-
-        assertThat(stock).isEqualTo(42L);
+        assertThat(stockService.getStock(PRODUCT_ID)).isEqualTo(42L);
     }
 
     @Test
@@ -91,8 +105,6 @@ class StockServiceTest {
         given(redisTemplate.opsForValue()).willReturn(valueOps);
         given(valueOps.get(STOCK_KEY)).willReturn(null);
 
-        Long stock = stockService.getStock(PRODUCT_ID);
-
-        assertThat(stock).isZero();
+        assertThat(stockService.getStock(PRODUCT_ID)).isZero();
     }
 }
