@@ -58,7 +58,7 @@ class OrderServiceTest {
         Order order = Order.create(member, onSaleProduct, 1);
 
         given(memberRepository.findById(1L)).willReturn(Optional.of(member));
-        given(productRepository.findById(1L)).willReturn(Optional.of(onSaleProduct));
+        given(productRepository.findByIdWithLock(1L)).willReturn(Optional.of(onSaleProduct));
         given(orderRepository.save(any())).willReturn(order);
 
         OrderResponse response = orderService.placeOrder(request);
@@ -75,7 +75,7 @@ class OrderServiceTest {
         OrderCreateRequest request = new OrderCreateRequest(1L, 1L, 1);
 
         given(memberRepository.findById(1L)).willReturn(Optional.of(member));
-        given(productRepository.findById(1L)).willReturn(Optional.of(lowStockProduct));
+        given(productRepository.findByIdWithLock(1L)).willReturn(Optional.of(lowStockProduct));
 
         assertThatThrownBy(() -> orderService.placeOrder(request))
                 .isInstanceOf(OutOfStockException.class);
@@ -87,7 +87,7 @@ class OrderServiceTest {
         OrderCreateRequest request = new OrderCreateRequest(1L, 1L, 1);
 
         given(memberRepository.findById(1L)).willReturn(Optional.of(member));
-        given(productRepository.findById(1L)).willReturn(Optional.of(notYetOnSaleProduct));
+        given(productRepository.findByIdWithLock(1L)).willReturn(Optional.of(notYetOnSaleProduct));
 
         assertThatThrownBy(() -> orderService.placeOrder(request))
                 .isInstanceOf(SaleNotStartedException.class);
