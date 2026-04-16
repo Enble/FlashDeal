@@ -63,8 +63,14 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void initRedisStock(Product product) {
-        // 서버 재기동 시마다 Redis 재고를 초기값으로 덮어쓴다.
-        // 이전 테스트로 소진된 재고가 남아 있어도 항상 깨끗한 상태에서 시작하도록 SET(덮어쓰기)을 사용한다.
+        // 앱 재기동 시마다 Redis 재고를 초기값으로 덮어쓴다 (테스트/데모 환경 의도).
+        //
+        // product.stockQuantity(DB)는 상품 생성 시 설정된 초기 할당량을 의미한다.
+        // 판매 중 실시간 재고는 Redis가 단독으로 관리하므로 DB 컬럼은 이후 업데이트되지 않는다.
+        // Redis가 재고의 단일 진실 공급원(source of truth)이다.
+        //
+        // AOF 활성화 시 Redis 프로세스 크래시 → 자동 재시작 구간에서는 AOF가 재고를 복구한다.
+        // 단, 앱 자체가 재시작되면 이 메서드가 다시 실행되어 초기값으로 리셋된다.
         stockService.initStock(product.getId(), INITIAL_STOCK);
         log.info("Redis 재고 초기화 완료 — stock:{} = {}", product.getId(), INITIAL_STOCK);
     }

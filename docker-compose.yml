@@ -55,7 +55,14 @@ services:
     container_name: flashdeal-redis
     ports:
       - "6379:6379"
-    command: redis-server --save "" --appendonly no
+    command: >
+      redis-server
+      --save ""
+      --appendonly yes
+      --appendfsync everysec
+      --no-appendfsync-on-rewrite yes
+    volumes:
+      - redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -79,3 +86,4 @@ services:
 volumes:
   mysql-data:
   grafana-data:
+  redis-data:
