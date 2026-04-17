@@ -28,4 +28,12 @@ public class CouponController {
             @Valid @RequestBody CouponIssueRequest request) {
         return couponService.issue(couponId, request.memberId());
     }
+
+    @PostMapping("/{couponId}/issue-with-lock")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CouponIssueResponse issueWithLock(
+            @PathVariable Long couponId,
+            @Valid @RequestBody CouponIssueRequest request) {
+        return couponService.issueWithLock(couponId, request.memberId());
+    }
 }
