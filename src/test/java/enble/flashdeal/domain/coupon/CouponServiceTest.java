@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.redisson.api.RedissonClient;
 
 import java.util.Optional;
 
@@ -38,6 +39,12 @@ class CouponServiceTest {
 
     @Mock
     private MemberRepository memberRepository;
+
+    @Mock
+    private RedissonClient redissonClient;
+
+    @Mock
+    private CouponIssueProcessor couponIssueProcessor;
 
     private Member member;
     private Coupon coupon;
