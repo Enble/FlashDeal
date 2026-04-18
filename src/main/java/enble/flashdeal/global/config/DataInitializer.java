@@ -1,5 +1,7 @@
 package enble.flashdeal.global.config;
 
+import enble.flashdeal.domain.coupon.Coupon;
+import enble.flashdeal.domain.coupon.CouponRepository;
 import enble.flashdeal.domain.member.Member;
 import enble.flashdeal.domain.member.MemberRepository;
 import enble.flashdeal.domain.product.Product;
@@ -12,6 +14,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -23,15 +26,21 @@ public class DataInitializer implements CommandLineRunner {
     private final MemberRepository memberRepository;
     private final ProductRepository productRepository;
     private final StockService stockService;
+    private final CouponRepository couponRepository;
 
     private static final String PRODUCT_NAME = "플래시딜 상품 A";
     private static final int INITIAL_STOCK = 10_000;
+
+    private static final String COUPON_NAME = "플래시딜 쿠폰 (JMeter)";
+    private static final int COUPON_QUANTITY = 300;
+    private static final int JMETER_MEMBER_COUNT = 500;
 
     @Override
     public void run(String... args) {
         initMembers();
         Product product = initProduct();
         initRedisStock(product);
+        initCoupon();
     }
 
     private void initMembers() {
@@ -39,12 +48,14 @@ public class DataInitializer implements CommandLineRunner {
             log.info("회원 데이터 이미 존재 — 건너뜀");
             return;
         }
-        List<Member> members = memberRepository.saveAll(List.of(
-                Member.create("테스트유저1", "user1@test.com"),
-                Member.create("테스트유저2", "user2@test.com"),
-                Member.create("테스트유저3", "user3@test.com")
-        ));
-        log.info("회원 데이터 초기화 완료 — {}명", members.size());
+        List<Member> members = new ArrayList<>();
+        for (int i = 1; i <= JMETER_MEMBER_COUNT; i++) {
+            members.add(Member.create("JMeter유저" + i, "jmeter" + i + "@test.com"));
+        }
+        List<Member> saved = memberRepository.saveAll(members);
+        log.info("회원 데이터 초기화 완료 — {}명 (ID: {} ~ {})",
+                saved.size(), saved.get(0).getId(), saved.get(saved.size() - 1).getId());
+        log.info("JMeter 설정 — MEMBER_ID_BASE={}", saved.get(0).getId());
     }
 
     private Product initProduct() {
@@ -73,5 +84,16 @@ public class DataInitializer implements CommandLineRunner {
         // 단, 앱 자체가 재시작되면 이 메서드가 다시 실행되어 초기값으로 리셋된다.
         stockService.initStock(product.getId(), INITIAL_STOCK);
         log.info("Redis 재고 초기화 완료 — stock:{} = {}", product.getId(), INITIAL_STOCK);
+    }
+
+    private void initCoupon() {
+        couponRepository.findByName(COUPON_NAME).ifPresentOrElse(
+                coupon -> log.info("쿠폰 이미 존재 — ID={}, 한도={}", coupon.getId(), coupon.getTotalQuantity()),
+                () -> {
+                    Coupon coupon = couponRepository.save(Coupon.create(COUPON_NAME, COUPON_QUANTITY));
+                    log.info("쿠폰 데이터 초기화 완료 — ID={}, 한도={}", coupon.getId(), coupon.getTotalQuantity());
+                    log.info("JMeter 설정 — COUPON_ID={}", coupon.getId());
+                }
+        );
     }
 }

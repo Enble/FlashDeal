@@ -1,0 +1,177 @@
+{
+  "title": "FlashDeal - Phase 4 Coupon Issuance",
+  "uid": "flashdeal-phase4",
+  "schemaVersion": 36,
+  "version": 1,
+  "refresh": "5s",
+  "time": { "from": "now-5m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "HTTP Throughput (req/s) — 락 없음 vs Redisson",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "custom": { "lineWidth": 2 } }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_server_requests_seconds_count{uri=~\"/coupons/.*/issue\"}[30s]))",
+          "legendFormat": "TPS — 락 없음 (/issue)"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_server_requests_seconds_count{uri=~\"/coupons/.*/issue-with-lock\"}[30s]))",
+          "legendFormat": "TPS — Redisson (/issue-with-lock)"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_server_requests_seconds_count{uri=~\"/coupons/.*/issue\", outcome=\"SUCCESS\"}[30s]))",
+          "legendFormat": "TPS 성공 — 락 없음"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_server_requests_seconds_count{uri=~\"/coupons/.*/issue-with-lock\", outcome=\"SUCCESS\"}[30s]))",
+          "legendFormat": "TPS 성공 — Redisson"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "HTTP Response Time P99 (ms) — 락 없음 vs Redisson",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "ms", "custom": { "lineWidth": 2 } }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{uri=~\"/coupons/.*/issue\"}[30s])) by (le)) * 1000",
+          "legendFormat": "P99 — 락 없음"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{uri=~\"/coupons/.*/issue-with-lock\"}[30s])) by (le)) * 1000",
+          "legendFormat": "P99 — Redisson"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{uri=~\"/coupons/.*/issue\"}[30s])) by (le)) * 1000",
+          "legendFormat": "P95 — 락 없음"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{uri=~\"/coupons/.*/issue-with-lock\"}[30s])) by (le)) * 1000",
+          "legendFormat": "P95 — Redisson"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_server_requests_seconds_sum{uri=~\"/coupons/.*/issue\"}[30s])) / sum(rate(http_server_requests_seconds_count{uri=~\"/coupons/.*/issue\"}[30s])) * 1000",
+          "legendFormat": "Avg — 락 없음"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_server_requests_seconds_sum{uri=~\"/coupons/.*/issue-with-lock\"}[30s])) / sum(rate(http_server_requests_seconds_count{uri=~\"/coupons/.*/issue-with-lock\"}[30s])) * 1000",
+          "legendFormat": "Avg — Redisson"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "HikariCP Connections",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "custom": { "lineWidth": 2 } }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "hikaricp_connections_active",
+          "legendFormat": "Active (사용 중)"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "hikaricp_connections_pending",
+          "legendFormat": "Pending (대기 중)"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "hikaricp_connections_idle",
+          "legendFormat": "Idle (유휴)"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "hikaricp_connections_max",
+          "legendFormat": "Max (풀 크기)"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "HikariCP Connection Acquire Time (ms)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "ms", "custom": { "lineWidth": 2 } }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "hikaricp_connections_acquire_seconds_max * 1000",
+          "legendFormat": "Acquire Max (ms)"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "rate(hikaricp_connections_acquire_seconds_sum[30s]) / rate(hikaricp_connections_acquire_seconds_count[30s]) * 1000",
+          "legendFormat": "Acquire Avg (ms)"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "HTTP Error Rate (%) — 락 없음 vs Redisson",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "percent", "min": 0, "max": 100, "custom": { "lineWidth": 2 } }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "(1 - sum(rate(http_server_requests_seconds_count{uri=~\"/coupons/.*/issue\", outcome=\"SUCCESS\"}[30s])) / sum(rate(http_server_requests_seconds_count{uri=~\"/coupons/.*/issue\"}[30s]))) * 100",
+          "legendFormat": "Error Rate — 락 없음"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "(1 - sum(rate(http_server_requests_seconds_count{uri=~\"/coupons/.*/issue-with-lock\", outcome=\"SUCCESS\"}[30s])) / sum(rate(http_server_requests_seconds_count{uri=~\"/coupons/.*/issue-with-lock\"}[30s]))) * 100",
+          "legendFormat": "Error Rate — Redisson"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "JVM Process CPU Usage (%)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "percent", "min": 0, "max": 100, "custom": { "lineWidth": 2 } }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "process_cpu_usage * 100",
+          "legendFormat": "Process CPU (%)"
+        }
+      ]
+    }
+  ]
+}

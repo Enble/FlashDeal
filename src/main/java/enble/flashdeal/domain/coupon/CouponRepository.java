@@ -1,0 +1,8 @@
+package enble.flashdeal.domain.coupon;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface CouponRepository extends JpaRepository<Coupon, Long> {
+
+    java.util.Optional<Coupon> findByName(String name);
+}
