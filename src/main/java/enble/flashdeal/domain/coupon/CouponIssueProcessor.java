@@ -13,11 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 쿠폰 발급 임계 구역의 트랜잭션 처리를 담당한다.
- *
  * issueWithLock()에서 Redisson 락을 획득한 뒤 이 메서드를 호출한다.
+ * <p>
  * 별도 빈으로 분리한 이유: Spring @Transactional은 AOP 프록시 기반이므로
  * 같은 클래스 내 호출(self-invocation)에서는 트랜잭션이 적용되지 않는다.
- *
+ * <p>
  * 실행 순서: 락 획득 → 트랜잭션 시작 → 임계 구역 실행 → 트랜잭션 커밋 → 락 해제
  * 이 순서를 지켜야 락 해제 전에 커밋이 완료되어 다른 스레드가 최신 상태를 읽는다.
  */
