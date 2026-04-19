@@ -20,6 +20,22 @@ public class KafkaTopicConfig {
     }
 
     @Bean
+    public NewTopic orderCreatedRetry0Topic() {
+        return TopicBuilder.name(ORDER_CREATED + "-retry-0")
+                .partitions(3)
+                .replicas(1)
+                .build();
+    }
+
+    @Bean
+    public NewTopic orderCreatedRetry1Topic() {
+        return TopicBuilder.name(ORDER_CREATED + "-retry-1")
+                .partitions(3)
+                .replicas(1)
+                .build();
+    }
+
+    @Bean
     public NewTopic orderCreatedDltTopic() {
         return TopicBuilder.name(ORDER_CREATED_DLT)
                 .partitions(1)
