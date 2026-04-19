@@ -1,0 +1,205 @@
+{
+  "title": "FlashDeal - Phase 5 Kafka 비동기 후처리",
+  "uid": "flashdeal-phase5",
+  "schemaVersion": 36,
+  "version": 1,
+  "refresh": "5s",
+  "time": { "from": "now-5m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "응답시간 P99 비교 — 동기 후처리 vs Kafka 비동기",
+      "description": "sync-post: 알림(150ms) + 정산(100ms) 직렬 실행. async-post: 주문 저장 후 즉시 응답, 후처리는 Kafka Consumer가 담당.",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": { "lineWidth": 2 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{uri=\"/orders/sync-post\"}[10s])) by (le)) * 1000",
+          "legendFormat": "P99 — 동기 후처리 (/sync-post)"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{uri=\"/orders/async-post\"}[10s])) by (le)) * 1000",
+          "legendFormat": "P99 — Kafka 비동기 (/async-post)"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_server_requests_seconds_sum{uri=\"/orders/sync-post\"}[10s])) / sum(rate(http_server_requests_seconds_count{uri=\"/orders/sync-post\"}[10s])) * 1000",
+          "legendFormat": "Avg — 동기 후처리"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_server_requests_seconds_sum{uri=\"/orders/async-post\"}[10s])) / sum(rate(http_server_requests_seconds_count{uri=\"/orders/async-post\"}[10s])) * 1000",
+          "legendFormat": "Avg — Kafka 비동기"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "처리량 (req/s) — sync-post vs async-post",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 9, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "lineWidth": 2 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_server_requests_seconds_count{uri=\"/orders/sync-post\", outcome=\"SUCCESS\"}[10s]))",
+          "legendFormat": "TPS — 동기 후처리 (성공)"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_server_requests_seconds_count{uri=\"/orders/async-post\", outcome=\"SUCCESS\"}[10s]))",
+          "legendFormat": "TPS — Kafka 비동기 (성공)"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Kafka Consumer Lag (order-processor 그룹)",
+      "description": "Consumer가 처리하지 못하고 쌓인 메시지 수. 부하 spike 시 일시적으로 증가했다가 감소해야 정상.",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 9, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "lineWidth": 2 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(kafka_consumer_fetch_manager_records_lag_max{client_id=~\"consumer-order-processor-[0-9]+\"})",
+          "legendFormat": "Consumer Lag Max (order-processor)"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Kafka — 처리 속도 (Consumer 소비율 & Producer 발행율)",
+      "description": "Consumer 소비율은 항상 표시. Producer 발행율(kafka_producer_*)은 첫 메시지 발행 후 등록되므로 JMeter async-post 테스트 실행 중에만 표시됨.",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 17, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "lineWidth": 2 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(kafka_consumer_fetch_manager_records_consumed_rate{client_id=~\"consumer-order-processor-[0-9]+\"})",
+          "legendFormat": "Consumer 소비율 (records/s)"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(kafka_producer_record_send_total[10s]))",
+          "legendFormat": "Producer 발행율 (records/s)"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(kafka_producer_record_error_total[10s]))",
+          "legendFormat": "Producer 오류율 (records/s)"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "HikariCP 커넥션 상태",
+      "description": "동기 후처리는 알림+정산 실행 동안 커넥션을 점유하므로 Pending이 증가할 수 있다.",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 17, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "lineWidth": 2 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "hikaricp_connections_active",
+          "legendFormat": "Active (사용 중)"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "hikaricp_connections_pending",
+          "legendFormat": "Pending (대기 중)"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "hikaricp_connections_idle",
+          "legendFormat": "Idle (유휴)"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "HTTP 오류율",
+      "description": "동기 후처리에서 알림 서비스 장애 시 5xx가 발생하는 반면, Kafka 비동기에서는 오류가 DLT로 격리되어 주문 흐름에 영향 없음.",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 25, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "lineWidth": 2 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_server_requests_seconds_count{uri=\"/orders/sync-post\", outcome=\"SERVER_ERROR\"}[10s])) or vector(0)",
+          "legendFormat": "5xx — 동기 후처리"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_server_requests_seconds_count{uri=\"/orders/async-post\", outcome=\"SERVER_ERROR\"}[10s])) or vector(0)",
+          "legendFormat": "5xx — Kafka 비동기"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "JVM Thread Count",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 25, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "lineWidth": 2 }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "jvm_threads_live_threads",
+          "legendFormat": "Live Threads"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "jvm_threads_daemon_threads",
+          "legendFormat": "Daemon Threads"
+        }
+      ]
+    }
+  ]
+}
