@@ -132,7 +132,13 @@ class OrderControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("OUT_OF_STOCK"));
+                .andExpect(jsonPath("$.code").value("OUT_OF_STOCK"))
+                .andDo(document("order-create-out-of-stock",
+                        responseFields(
+                                fieldWithPath("code").description("에러 코드"),
+                                fieldWithPath("message").description("에러 메시지")
+                        )
+                ));
     }
 
     @Test
@@ -145,6 +151,12 @@ class OrderControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("SALE_NOT_STARTED"));
+                .andExpect(jsonPath("$.code").value("SALE_NOT_STARTED"))
+                .andDo(document("order-create-sale-not-started",
+                        responseFields(
+                                fieldWithPath("code").description("에러 코드"),
+                                fieldWithPath("message").description("에러 메시지")
+                        )
+                ));
     }
 }
