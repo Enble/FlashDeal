@@ -1,5 +1,6 @@
 package enble.flashdeal.domain.order;
 
+import enble.flashdeal.domain.anomaly.AnomalyDetectionService;
 import enble.flashdeal.domain.notification.NotificationService;
 import enble.flashdeal.domain.order.event.OrderCreatedEvent;
 import enble.flashdeal.domain.settlement.SettlementService;
@@ -19,6 +20,7 @@ public class OrderCreatedConsumer {
 
     private final NotificationService notificationService;
     private final SettlementService settlementService;
+    private final AnomalyDetectionService anomalyDetectionService;
 
     /**
      * order-created 이벤트를 소비해 알림 발송과 정산을 처리한다.
@@ -41,5 +43,10 @@ public class OrderCreatedConsumer {
         log.info("[Consumer] 이벤트 수신 — orderId={}, productId={}", event.orderId(), event.productId());
         notificationService.notify(event);
         settlementService.record(event);
+        try {
+            anomalyDetectionService.detect(event);
+        } catch (Exception e) {
+            log.error("[Consumer] 이상 탐지 처리 실패 — orderId={}", event.orderId(), e);
+        }
     }
 }
