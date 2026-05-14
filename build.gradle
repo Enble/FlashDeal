@@ -19,6 +19,7 @@ repositories {
     mavenCentral()
 }
 
+
 ext {
     set('snippetsDir', file("build/generated-snippets"))
 }
@@ -38,6 +39,7 @@ dependencies {
     runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
     annotationProcessor 'org.projectlombok:lombok'
     implementation 'org.springframework.kafka:spring-kafka'
+    implementation 'org.springframework.ai:spring-ai-openai-spring-boot-starter:1.0.0-M6'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
     testImplementation 'org.springframework.kafka:spring-kafka-test'
