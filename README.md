@@ -3,7 +3,7 @@
 > 대규모 동시 요청 환경에서의 동시성 제어 및 비동기 처리 아키텍처 탐구
 
 - **기간** 2026.03 ~ 2026.05
-- **스택** Java 17 · Spring Boot 3.x · MySQL · Redis · Redisson · Kafka
+- **스택** Java 17 · Spring Boot 3.x · MySQL · Redis · Redisson · Kafka · Spring AI
 - **형태** 개인 토이 프로젝트
 - **Wiki** [Phase별 상세 분석 문서](../../wiki)
 
@@ -48,6 +48,7 @@
 | 데이터베이스 | MySQL |
 | 캐시 / 동시성 | Redis, Redisson, Lua Script |
 | 메시징 | Kafka, Dead Letter Topic |
+| AI | Spring AI, OpenAI API (gpt-4o-mini) |
 | 인프라 / 테스트 | Docker Compose, JMeter, JUnit 5 |
 
 ---
