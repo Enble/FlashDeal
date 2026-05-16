@@ -2,7 +2,8 @@
 
 > 대규모 동시 요청 환경에서의 동시성 제어 및 비동기 처리 아키텍처 탐구
 
-- **스택** Java 17 · Spring Boot 3.x · MySQL · Redis · Redisson · Kafka · Spring AI (OpenAI)
+- **기간** 2026.03 ~ 2026.05
+- **스택** Java 17 · Spring Boot 3.4.5 · MySQL · Redis · Redisson · Kafka · Spring AI (OpenAI)
 - **형태** 개인 토이 프로젝트
 
 ---
