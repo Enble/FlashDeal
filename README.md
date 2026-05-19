@@ -55,7 +55,7 @@
 
 ## 기술 선택 근거와 성과
 
-### P1 — 재고 오버셀: DB 락 → Redis DECR
+### 1. 재고 오버셀: DB 락 → Redis DECR
 
 **Phase 2 (DB 락)**: `SELECT FOR UPDATE`로 lost update와 데드락을 해소했다.
 그러나 락 대기 중에도 HikariCP 커넥션을 점유하므로 고동시 환경에서 커넥션 풀이 포화됐다.
@@ -72,9 +72,7 @@ DB 락 없이 경합을 제거하고, 메모리 기반이라 응답속도도 빠
 
 보상 설계: Lua script로 DECR + 조건부 INCR을 원자 블록으로 묶고, `TransactionSynchronization.afterCompletion(ROLLED_BACK)` 콜백에서 DB 롤백 시 Redis 재고를 복구한다. `@Retryable`로 복구 실패 재시도.
 
----
-
-### P2 — 복합 조건 원자성: Redisson 분산 락
+### 2. 복합 조건 원자성: Redisson 분산 락
 
 **Phase 4**: 쿠폰 발급은 "중복 확인 → 수량 확인 → 발급" 세 단계를 하나의 임계 구역으로 묶어야 한다.
 Redis DECR은 단일 연산만 원자적이므로 다단계 로직에 맞지 않는다.
@@ -85,9 +83,7 @@ Redisson `tryLock(waitTime=3s, leaseTime=3s)`로 타임아웃과 자동 해제�
 | 실제 발급 건수 (한도 300) | 301건 (oversell) | 300건 (정확) |
 | HikariCP acquire max | 122ms | 0.701ms |
 
----
-
-### P3 — API 응답 지연: Kafka 비동기 이벤트
+### 3. API 응답 지연: Kafka 비동기 이벤트
 
 **Phase 5**: 알림(150ms)·정산(100ms)을 동기로 호출하면 250ms가 P99에 직접 합산되고 Tomcat 스레드를 장시간 점유한다.
 `order-created` 이벤트를 `TransactionSynchronization.afterCommit()` 콜백에서 발행하면 DB 커밋 후 즉시 응답하고, Consumer가 독립적으로 후처리한다.
