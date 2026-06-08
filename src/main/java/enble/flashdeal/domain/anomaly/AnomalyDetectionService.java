@@ -1,10 +1,14 @@
 package enble.flashdeal.domain.anomaly;
 
+import enble.flashdeal.domain.anomaly.event.AnomalyDetectedEvent;
+import enble.flashdeal.domain.anomaly.event.AnomalyDetectedEvent.OrderSummary;
 import enble.flashdeal.domain.order.Order;
 import enble.flashdeal.domain.order.OrderRepository;
 import enble.flashdeal.domain.order.event.OrderCreatedEvent;
+import enble.flashdeal.global.config.KafkaTopicConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -20,7 +24,7 @@ public class AnomalyDetectionService {
 
     private final OrderRepository orderRepository;
     private final AnomalyReportRepository anomalyReportRepository;
-    private final AiReportGenerator aiReportGenerator;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     public void detect(OrderCreatedEvent event) {
         LocalDateTime windowStart = event.occurredAt().minusMinutes(DETECTION_WINDOW_MINUTES);
@@ -35,18 +39,16 @@ public class AnomalyDetectionService {
 
         log.warn("[이상 탐지] 비정상 패턴 감지 — memberId={}, {}", event.memberId(), reason);
 
-        String aiSummary = null;
-        AnomalyStatus status;
+        AnomalyReport report = anomalyReportRepository.save(
+                AnomalyReport.createPending(event.memberId(), event.orderId(), reason));
 
-        try {
-            aiSummary = aiReportGenerator.generate(event.memberId(), recentOrders);
-            status = AnomalyStatus.AI_COMPLETED;
-        } catch (Exception e) {
-            log.error("[이상 탐지] AI 리포트 생성 실패 — memberId={}", event.memberId(), e);
-            status = AnomalyStatus.AI_FAILED;
-        }
+        List<OrderSummary> summaries = recentOrders.stream()
+                .map(o -> new OrderSummary(o.getId(), o.getProduct().getId(), o.getQuantity(), o.getCreatedAt()))
+                .toList();
 
-        anomalyReportRepository.save(
-                AnomalyReport.create(event.memberId(), event.orderId(), reason, aiSummary, status));
+        kafkaTemplate.send(KafkaTopicConfig.ANOMALY_DETECTED,
+                new AnomalyDetectedEvent(report.getId(), event.memberId(), event.orderId(), reason, summaries));
+
+        log.info("[이상 탐지] anomaly-detected 이벤트 발행 — reportId={}", report.getId());
     }
 }

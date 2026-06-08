@@ -32,6 +32,12 @@ public class AnomalyReport {
     @Column(columnDefinition = "TEXT")
     private String aiSummary;
 
+    @Column(length = 10)
+    private String severity;
+
+    @Column(columnDefinition = "TEXT")
+    private String recommendation;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AnomalyStatus status;
@@ -40,14 +46,12 @@ public class AnomalyReport {
     @Column(updatable = false)
     private LocalDateTime detectedAt;
 
-    public static AnomalyReport create(Long memberId, Long triggerOrderId, String detectedReason,
-                                       String aiSummary, AnomalyStatus status) {
+    public static AnomalyReport createPending(Long memberId, Long triggerOrderId, String detectedReason) {
         AnomalyReport report = new AnomalyReport();
         report.memberId = memberId;
         report.triggerOrderId = triggerOrderId;
         report.detectedReason = detectedReason;
-        report.aiSummary = aiSummary;
-        report.status = status;
+        report.status = AnomalyStatus.PENDING;
         return report;
     }
 }

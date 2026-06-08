@@ -11,6 +11,8 @@ public record AnomalyReportResponse(
         Long triggerOrderId,
         String detectedReason,
         String aiSummary,
+        String severity,
+        String recommendation,
         AnomalyStatus status,
         LocalDateTime detectedAt
 ) {
@@ -21,6 +23,8 @@ public record AnomalyReportResponse(
                 report.getTriggerOrderId(),
                 report.getDetectedReason(),
                 report.getAiSummary(),
+                report.getSeverity(),
+                report.getRecommendation(),
                 report.getStatus(),
                 report.getDetectedAt()
         );

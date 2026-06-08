@@ -39,8 +39,10 @@ class AnomalyReportControllerTest {
         return new AnomalyReportResponse(
                 1L, 42L, 10L,
                 "최근 10분 내 2건 주문 감지 (임계값: 2건)",
-                "회원 42번은 10분 내 2건의 주문을 시도했습니다. 플래시 세일 1인 1회 원칙에 위배되는 비정상 패턴입니다.",
-                AnomalyStatus.AI_COMPLETED,
+                "10분 내 2건 주문. 유사 패턴(similarity 0.91)과 일치.",
+                "HIGH",
+                "계정 임시 정지 후 수동 검토",
+                AnomalyStatus.ANALYZED,
                 LocalDateTime.of(2026, 5, 14, 12, 0, 0)
         );
     }
@@ -59,8 +61,10 @@ class AnomalyReportControllerTest {
                                 fieldWithPath("[].memberId").description("대상 회원 ID"),
                                 fieldWithPath("[].triggerOrderId").description("탐지를 유발한 주문 ID"),
                                 fieldWithPath("[].detectedReason").description("룰 기반 탐지 사유"),
-                                fieldWithPath("[].aiSummary").description("AI 생성 요약 (AI_FAILED 시 null)").optional(),
-                                fieldWithPath("[].status").description("리포트 상태 (AI_COMPLETED / AI_FAILED)"),
+                                fieldWithPath("[].aiSummary").description("AI 생성 요약 (ANALYZED 완료 후 채워짐)").optional(),
+                                fieldWithPath("[].severity").description("심각도 (HIGH / MEDIUM / LOW)").optional(),
+                                fieldWithPath("[].recommendation").description("권장 조치").optional(),
+                                fieldWithPath("[].status").description("리포트 상태 (PENDING / ANALYZED / ANALYSIS_FAILED)"),
                                 fieldWithPath("[].detectedAt").description("탐지 시각")
                         )
                 ));
@@ -73,7 +77,7 @@ class AnomalyReportControllerTest {
 
         mockMvc.perform(get("/admin/anomaly-reports/{id}", 1L))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("AI_COMPLETED"))
+                .andExpect(jsonPath("$.status").value("ANALYZED"))
                 .andDo(document("anomaly-report-get",
                         pathParameters(
                                 parameterWithName("id").description("리포트 ID")
@@ -84,7 +88,9 @@ class AnomalyReportControllerTest {
                                 fieldWithPath("triggerOrderId").description("탐지를 유발한 주문 ID"),
                                 fieldWithPath("detectedReason").description("룰 기반 탐지 사유"),
                                 fieldWithPath("aiSummary").description("AI 생성 요약").optional(),
-                                fieldWithPath("status").description("리포트 상태 (AI_COMPLETED / AI_FAILED)"),
+                                fieldWithPath("severity").description("심각도 (HIGH / MEDIUM / LOW)").optional(),
+                                fieldWithPath("recommendation").description("권장 조치").optional(),
+                                fieldWithPath("status").description("리포트 상태 (PENDING / ANALYZED / ANALYSIS_FAILED)"),
                                 fieldWithPath("detectedAt").description("탐지 시각")
                         )
                 ));
