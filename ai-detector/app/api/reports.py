@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.agent.anomaly_agent import analyze_anomaly
+from app.agent.anomaly_agent import analyze_anomaly, get_latency_stats
 from app.db.session import get_session
 from app.db.models import AnomalyReport
 from app.schemas.anomaly import AnomalyDetectedEvent, AnomalyReportResponse
@@ -29,6 +29,12 @@ async def get_report(report_id: int, session: AsyncSession = Depends(get_session
     if report is None:
         raise HTTPException(status_code=404, detail="Report not found")
     return report
+
+
+@router.get("/stats/latency")
+async def latency_stats():
+    """Agent 분석 latency 통계 (p50/p95/p99). 최근 100건 기준."""
+    return get_latency_stats()
 
 
 class BackfillResult(BaseModel):

@@ -1,5 +1,7 @@
 import json
 import logging
+import time
+from collections import deque
 
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain_core.messages import SystemMessage
@@ -9,6 +11,9 @@ from langchain_openai import ChatOpenAI
 from app.agent.tools import search_similar_patterns, summarize_order_context
 from app.agent.vector_store import is_mock_mode
 from app.schemas.anomaly import AnomalyAnalysis, AnomalyDetectedEvent
+
+# 최근 100건 latency 기록 (p50/p95 계산용)
+_latency_ms: deque[float] = deque(maxlen=100)
 
 logger = logging.getLogger(__name__)
 
@@ -103,15 +108,20 @@ async def analyze_anomaly(event: AnomalyDetectedEvent) -> AnomalyAnalysis:
         f"summarize_order_context 도구에는 memberId={event.member_id}와 위 JSON을 전달하라."
     )
 
+    t0 = time.perf_counter()
+
     # Step 1 — Agent tool 실행
+    t1 = time.perf_counter()
     agent_result = await _agent_executor.ainvoke({
         "input": agent_input,
         "chat_history": [],
     })
     agent_output = agent_result.get("output", "")
-    logger.info("[agent] tool 실행 완료 — reportId=%d, output_len=%d", event.report_id, len(agent_output))
+    step1_ms = (time.perf_counter() - t1) * 1000
+    logger.info("[agent] step1(tool) %.0fms — reportId=%d", step1_ms, event.report_id)
 
     # Step 2 — Structured output
+    t2 = time.perf_counter()
     analysis_context = (
         f"이상 감지 원본:\n"
         f"- 회원 ID: {event.member_id}\n"
@@ -120,8 +130,32 @@ async def analyze_anomaly(event: AnomalyDetectedEvent) -> AnomalyAnalysis:
         f"Agent 분석 결과:\n{agent_output}"
     )
     analysis: AnomalyAnalysis = await _analysis_chain.ainvoke(analysis_context)
+    step2_ms = (time.perf_counter() - t2) * 1000
+    total_ms = (time.perf_counter() - t0) * 1000
+    _latency_ms.append(total_ms)
+
     logger.info(
-        "[agent] structured output 완료 — reportId=%d, severity=%s",
-        event.report_id, analysis.severity,
+        "[agent] step2(structured) %.0fms | total %.0fms | severity=%s — reportId=%d",
+        step2_ms, total_ms, analysis.severity, event.report_id,
     )
     return analysis
+
+
+def get_latency_stats() -> dict:
+    """최근 분석 latency 통계 반환 (p50/p95/p99/mean)."""
+    if not _latency_ms:
+        return {"count": 0}
+    data = sorted(_latency_ms)
+    n = len(data)
+    def pct(p: float) -> float:
+        idx = min(int(n * p / 100), n - 1)
+        return round(data[idx], 1)
+    return {
+        "count": n,
+        "mean_ms": round(sum(data) / n, 1),
+        "p50_ms": pct(50),
+        "p95_ms": pct(95),
+        "p99_ms": pct(99),
+        "min_ms": round(data[0], 1),
+        "max_ms": round(data[-1], 1),
+    }
