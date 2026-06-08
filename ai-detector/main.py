@@ -6,7 +6,10 @@ from fastapi import FastAPI
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s [%(name)s] %(message)s")
 
+from app.agent.anomaly_agent import init_agent
+from app.agent.vector_store import init_vector_store
 from app.api import reports
+from app.config import settings
 from app.consumer.anomaly_consumer import AnomalyConsumer
 from app.db.session import init_db
 
@@ -20,6 +23,8 @@ _consumer_task: asyncio.Task | None = None
 async def lifespan(app: FastAPI):
     global _consumer, _consumer_task
     await init_db()
+    await init_vector_store(settings.openai_api_key)
+    init_agent()
     _consumer = AnomalyConsumer()
     await _consumer.start()
     _consumer_task = asyncio.create_task(_consumer.run())

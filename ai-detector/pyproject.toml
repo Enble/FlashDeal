@@ -12,6 +12,7 @@ uvicorn = {extras = ["standard"], version = "^0.32"}
 aiokafka = "^0.11"
 langchain = "^0.3"
 langchain-openai = "^0.2"
+langchain-community = "^0.3"
 faiss-cpu = "^1.9"
 sqlalchemy = {extras = ["asyncio"], version = "^2.0"}
 asyncmy = "^0.2"

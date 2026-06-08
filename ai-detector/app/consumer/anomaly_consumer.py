@@ -4,8 +4,12 @@ import logging
 
 from aiokafka import AIOKafkaConsumer
 from aiokafka.errors import KafkaError
+from sqlalchemy import select
 
+from app.agent.anomaly_agent import analyze_anomaly
 from app.config import settings
+from app.db.models import AnomalyReport
+from app.db.session import async_session
 from app.schemas.anomaly import AnomalyDetectedEvent
 
 logger = logging.getLogger(__name__)
@@ -47,18 +51,38 @@ class AnomalyConsumer:
     async def _handle(self, msg):
         try:
             event = AnomalyDetectedEvent.model_validate(msg.value)
-            logger.info(
-                "[consumer] 이벤트 수신 — reportId=%d, memberId=%d",
-                event.report_id, event.member_id,
-            )
-            # Week 2에서 Agent 호출로 교체
+            logger.info("[consumer] 이벤트 수신 — reportId=%d, memberId=%d", event.report_id, event.member_id)
             await self._process(event)
         except Exception as e:
-            logger.error("[consumer] 처리 실패 — error=%s, value=%s", e, msg.value)
+            logger.error("[consumer] 처리 실패 — reportId=%s, error=%s", msg.value.get("reportId"), e)
 
     async def _process(self, event: AnomalyDetectedEvent):
-        """Week 2에서 LangChain Agent 호출로 교체 예정."""
-        logger.info(
-            "[consumer] (stub) reportId=%d 처리 완료 — Agent 미연결 상태",
-            event.report_id,
-        )
+        try:
+            analysis = await analyze_anomaly(event)
+            async with async_session() as session:
+                result = await session.execute(
+                    select(AnomalyReport).where(AnomalyReport.id == event.report_id)
+                )
+                report = result.scalar_one_or_none()
+                if report is None:
+                    logger.warning("[consumer] AnomalyReport not found — reportId=%d", event.report_id)
+                    return
+                report.status = "ANALYZED"
+                report.severity = analysis.severity
+                report.ai_summary = analysis.explanation
+                report.recommendation = analysis.recommendation
+                await session.commit()
+            logger.info(
+                "[consumer] ANALYZED 저장 완료 — reportId=%d, severity=%s",
+                event.report_id, analysis.severity,
+            )
+        except Exception as e:
+            logger.error("[consumer] Agent 분석 실패 — reportId=%d, error=%s", event.report_id, e)
+            async with async_session() as session:
+                result = await session.execute(
+                    select(AnomalyReport).where(AnomalyReport.id == event.report_id)
+                )
+                report = result.scalar_one_or_none()
+                if report:
+                    report.status = "ANALYSIS_FAILED"
+                    await session.commit()
