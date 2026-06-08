@@ -14,11 +14,11 @@ class AnomalyReport(Base):
     __tablename__ = "anomaly_reports"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    member_id: Mapped[int] = mapped_column("memberId", BigInteger, nullable=False)
-    trigger_order_id: Mapped[int] = mapped_column("triggerOrderId", BigInteger, nullable=False)
-    detected_reason: Mapped[str] = mapped_column("detectedReason", String(500), nullable=False)
-    ai_summary: Mapped[Optional[str]] = mapped_column("aiSummary", Text)
+    member_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    trigger_order_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    detected_reason: Mapped[str] = mapped_column(String(500), nullable=False)
+    ai_summary: Mapped[Optional[str]] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(30), nullable=False)
     severity: Mapped[Optional[str]] = mapped_column(String(10))
     recommendation: Mapped[Optional[str]] = mapped_column(Text)
-    detected_at: Mapped[Optional[datetime]] = mapped_column("detectedAt", DateTime)
+    detected_at: Mapped[Optional[datetime]] = mapped_column(DateTime)

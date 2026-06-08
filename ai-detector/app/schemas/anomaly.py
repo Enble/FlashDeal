@@ -13,7 +13,7 @@ class RecentOrder(BaseModel):
     order_id: int
     product_id: int
     quantity: int
-    created_at: datetime
+    created_at: str  # ISO-8601 문자열 (Spring Boot에서 포맷 후 전송)
 
 
 class AnomalyDetectedEvent(BaseModel):

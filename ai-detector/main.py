@@ -4,6 +4,8 @@ import logging
 
 from fastapi import FastAPI
 
+logging.basicConfig(level=logging.INFO, format="%(levelname)s [%(name)s] %(message)s")
+
 from app.api import reports
 from app.consumer.anomaly_consumer import AnomalyConsumer
 from app.db.session import init_db
