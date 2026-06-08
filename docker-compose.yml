@@ -119,8 +119,10 @@ services:
       DB_URL: mysql+asyncmy://root:${MYSQL_ROOT_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9094
       OPENAI_API_KEY: ${OPENAI_API_KEY:-dummy}
-      LANGCHAIN_TRACING_V2: ${LANGCHAIN_TRACING_V2:-false}
-      LANGCHAIN_API_KEY: ${LANGCHAIN_API_KEY:-}
+      LANGSMITH_TRACING: ${LANGSMITH_TRACING:-false}
+      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
+      LANGSMITH_ENDPOINT: ${LANGSMITH_ENDPOINT:-https://api.smith.langchain.com}
+      LANGSMITH_PROJECT: ${LANGSMITH_PROJECT:-flashdeal-ai-detector}
     depends_on:
       mysql:
         condition: service_healthy
