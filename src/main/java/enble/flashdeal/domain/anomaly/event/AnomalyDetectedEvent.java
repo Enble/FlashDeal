@@ -1,6 +1,5 @@
 package enble.flashdeal.domain.anomaly.event;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 public record AnomalyDetectedEvent(
@@ -14,6 +13,6 @@ public record AnomalyDetectedEvent(
             Long orderId,
             Long productId,
             Integer quantity,
-            LocalDateTime createdAt
+            String createdAt
     ) {}
 }

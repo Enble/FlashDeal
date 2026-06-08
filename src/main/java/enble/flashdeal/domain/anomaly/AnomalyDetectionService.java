@@ -12,6 +12,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Slf4j
@@ -43,7 +44,8 @@ public class AnomalyDetectionService {
                 AnomalyReport.createPending(event.memberId(), event.orderId(), reason));
 
         List<OrderSummary> summaries = recentOrders.stream()
-                .map(o -> new OrderSummary(o.getId(), o.getProduct().getId(), o.getQuantity(), o.getCreatedAt()))
+                .map(o -> new OrderSummary(o.getId(), o.getProduct().getId(), o.getQuantity(),
+                        o.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)))
                 .toList();
 
         kafkaTemplate.send(KafkaTopicConfig.ANOMALY_DETECTED,

@@ -59,10 +59,3 @@ management:
     distribution:
       percentiles-histogram:
         http.server.requests: true
-
-  ai:
-    openai:
-      api-key: ${OPENAI_API_KEY:dummy}
-      chat:
-        options:
-          model: gpt-4o-mini
