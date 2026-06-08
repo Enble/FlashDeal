@@ -54,7 +54,8 @@ class AnomalyConsumer:
             logger.info("[consumer] 이벤트 수신 — reportId=%d, memberId=%d", event.report_id, event.member_id)
             await self._process(event)
         except Exception as e:
-            logger.error("[consumer] 처리 실패 — reportId=%s, error=%s", msg.value.get("reportId"), e)
+            report_id = msg.value.get("reportId") if isinstance(msg.value, dict) else "unknown"
+            logger.error("[consumer] 처리 실패 — reportId=%s, error=%s", report_id, e)
 
     async def _process(self, event: AnomalyDetectedEvent):
         try:

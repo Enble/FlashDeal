@@ -15,10 +15,9 @@ class Settings(BaseSettings):
     # OpenAI
     openai_api_key: str = "dummy"
 
-    # LangSmith (선택)
-    langchain_tracing_v2: bool = False
-    langchain_api_key: str = ""
-    langchain_project: str = "flashdeal-ai-detector"
+    # LangSmith 환경변수는 SDK가 os.environ에서 직접 읽음
+    # (LANGSMITH_TRACING, LANGSMITH_API_KEY, LANGSMITH_ENDPOINT, LANGSMITH_PROJECT)
+    # docker-compose.yml에서 컨테이너로 주입 — config.py 경유 불필요
 
 
 settings = Settings()
