@@ -4,7 +4,7 @@
 
 - **기간** 2026.03 ~ 2026.05
 - **스택** Java 17 · Spring Boot 3.x · MySQL · Redis · Redisson · Kafka · Spring AI
-- **형태** 개인 토이 프로젝트
+- **형태** 개인 프로젝트
 - **Wiki** [Phase별 상세 분석 문서](../../wiki)
 
 ---
