@@ -10,6 +10,7 @@ public class KafkaTopicConfig {
 
     public static final String ORDER_CREATED = "order-created";
     public static final String ORDER_CREATED_DLT = "order-created-dlt";
+    public static final String ANOMALY_DETECTED = "anomaly-detected";
 
     @Bean
     public NewTopic orderCreatedTopic() {
@@ -38,6 +39,14 @@ public class KafkaTopicConfig {
     @Bean
     public NewTopic orderCreatedDltTopic() {
         return TopicBuilder.name(ORDER_CREATED_DLT)
+                .partitions(1)
+                .replicas(1)
+                .build();
+    }
+
+    @Bean
+    public NewTopic anomalyDetectedTopic() {
+        return TopicBuilder.name(ANOMALY_DETECTED)
                 .partitions(1)
                 .replicas(1)
                 .build();
