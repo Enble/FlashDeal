@@ -71,8 +71,9 @@ async def backfill_pending(session: AsyncSession = Depends(get_session)):
             await session.commit()
             analyzed += 1
             logger.info("[backfill] reportId=%d → ANALYZED, severity=%s", report.id, analysis.severity)
-            await asyncio.sleep(0.5)  # OpenAI rate limit 여유
         except Exception as e:
             failed += 1
             logger.error("[backfill] reportId=%d 실패 — %s", report.id, e)
+        finally:
+            await asyncio.sleep(0.5)  # OpenAI rate limit 여유 (성공·실패 무관)
     return BackfillResult(total_pending=len(pending), analyzed=analyzed, failed=failed)
