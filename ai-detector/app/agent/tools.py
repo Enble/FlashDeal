@@ -16,7 +16,7 @@ def search_similar_patterns(query: str) -> str:
     results = store.similarity_search_with_score(query, k=3)
     lines = []
     for doc, score in results:
-        similarity = 1.0 - score  # FAISS L2 distance → 유사도 근사
+        similarity = 1.0 - score  # cosine distance → cosine similarity
         lines.append(f"[유사도 {similarity:.3f}] {doc.page_content}")
     combined = "\n".join(lines)
     logger.info("[tool] search_similar_patterns — top similarity=%.3f", 1.0 - results[0][1] if results else 0.0)

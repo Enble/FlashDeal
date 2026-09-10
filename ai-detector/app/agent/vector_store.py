@@ -1,6 +1,7 @@
 import logging
 
 from langchain_community.vectorstores import FAISS
+from langchain_community.vectorstores.utils import DistanceStrategy
 from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
 
@@ -60,5 +61,5 @@ async def init_vector_store(openai_api_key: str) -> None:
         Document(page_content=p, metadata={"pattern_id": i})
         for i, p in enumerate(_ABUSE_PATTERNS)
     ]
-    _store = FAISS.from_documents(docs, embeddings)
+    _store = FAISS.from_documents(docs, embeddings, distance_strategy=DistanceStrategy.COSINE)
     logger.info("FAISS vector store initialized — %d abuse patterns embedded", len(docs))
