@@ -5,6 +5,18 @@
 - **기간** 2026.03 ~ 2026.05
 - **스택** Java 17 · Spring Boot 3.4.5 · MySQL · Redis · Redisson · Kafka · Spring AI (OpenAI)
 - **형태** 개인 토이 프로젝트
+- **Wiki** [Phase별 상세 분석 문서](../../wiki)
+
+---
+
+## 핵심 성과
+
+| 문제 | 접근 | 결과 |
+|------|------|------|
+| 재고 오버셀 | Redis DECR 원자 연산 | 오류율 83% → 0%,  P99 4.57s → 49ms |
+| 복합 조건 원자성 | Redisson 분산 락 | 한도 300건 기준 oversell 0건 |
+| API 응답 지연 | Kafka 비동기 분리 | P99 5s → 105ms (47배), TPS 40 → 369 (9배) |
+| 이상 주문 탐지 | Spring AI + Kafka 파이프라인 | 룰 필터 + gpt-4o-mini 자동 리포트 |
 
 ---
 
@@ -57,6 +69,7 @@ DB 락 없이 경합을 제거하고, 메모리 기반이라 응답속도도 빠
 | HikariCP Pending Max | 98 | 0 |
 | P99 응답시간 | 4.57s | 49ms |
 | Throughput | 17.3/s | 191/s |
+| 오류율 | 83% | 0% |
 | 데이터 정합성 | 보장 | 보장 |
 
 추가 결정: Lua script로 DECR + 조건부 INCR을 원자 블록으로 묶고, `TransactionSynchronization.afterCompletion(ROLLED_BACK)` 콜백에서 DB 롤백 시 Redis 재고를 복구한다. `@Retryable`로 복구 실패 재시도.
@@ -111,7 +124,7 @@ AI 호출 실패 시 `status=AI_FAILED`로 저장하고 Consumer 처리는 계�
 
 ## 각 Phase 분석 문서
 
-상세한 구현 배경·코드·수치는 `docs/` 하위 분석 문서를 참고한다 (로컬 전용, `.gitignore`).
+상세한 구현 배경·코드·수치는 [Wiki](../../wiki)를 참고한다. 로컬 상세 문서는 `docs/` 하위에 있다 (`.gitignore`).
 
 | Phase | 내용 |
 |-------|------|
